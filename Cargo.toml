@@ -1,0 +1,13 @@
+[package]
+name = "parquet-dumper"
+description = "A command line inteface tool for dumping substrate-archive data from postgresql to parquet"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "3.1.6", features = ["derive"] }
+parquet = "11.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
