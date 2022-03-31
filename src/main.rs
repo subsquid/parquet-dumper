@@ -1,6 +1,6 @@
 use std::fs::{File, create_dir};
 use std::path::PathBuf;
-use std::io::{BufReader, BufRead};
+use std::io::stdin;
 use std::sync::Arc;
 use clap::Parser;
 use serde::Deserialize;
@@ -15,9 +15,6 @@ use parquet::data_type::ByteArray;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// A file name which are filling by substrate-archive
-    #[clap(short, long)]
-    file: String,
     /// An output directory for parquet files
     #[clap(short, long)]
     out_dir: String,
@@ -178,27 +175,18 @@ fn main() {
         create_dir(&block_out_dir).unwrap();
     }
 
-    let file = File::open(args.file).unwrap();
-    let mut reader = BufReader::new(file);
     let mut counter = 0;
-
     let mut block_parquet = BlockParquet::new();
-
     loop {
         counter += 1;
         let mut line = String::new();
-        reader.read_line(&mut line).unwrap();
+        stdin().read_line(&mut line).unwrap();
         let block_data: BlockData = serde_json::from_str(&line).unwrap();
-
         block_parquet.insert(block_data.header);
-
         if counter % args.capacity == 0 {
             let block_path = block_out_dir.join(format!("{}.parquet", counter));
-            println!("{:?}", &block_path);
             save_parquet(&block_parquet, &block_path);
-
             block_parquet = BlockParquet::new();
         }
     }
-
 }
