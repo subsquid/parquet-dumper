@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::io::stdin;
 use std::sync::Arc;
 use clap::Parser;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use parquet::file::writer::{SerializedFileWriter, FileWriter};
 use parquet::file::properties::WriterProperties;
@@ -30,7 +31,7 @@ struct Block {
     height: i32,
     hash: String,
     parent_hash: String,
-    timestamp: String,
+    timestamp: DateTime<Utc>,
 }
 
 
@@ -43,6 +44,7 @@ struct BlockData {
 enum ColumnData<'a> {
     ByteArray(&'a Vec<parquet::data_type::ByteArray>),
     Int32(&'a Vec<i32>),
+    Int64(&'a Vec<i64>),
 }
 
 
@@ -57,7 +59,7 @@ struct BlockParquetData {
     height: Vec<i32>,
     hash: Vec<ByteArray>,
     parent_hash: Vec<ByteArray>,
-    timestamp: Vec<ByteArray>,
+    timestamp: Vec<i64>,
 }
 
 
@@ -86,19 +88,18 @@ impl Parquet for BlockParquet {
             ColumnData::Int32(&self.data.height),
             ColumnData::ByteArray(&self.data.hash),
             ColumnData::ByteArray(&self.data.parent_hash),
-            ColumnData::ByteArray(&self.data.timestamp),
+            ColumnData::Int64(&self.data.timestamp),
         ])
     }
 
     fn schema(&self) -> Type {
-        // TODO: fix timestamp
         let message_type = "
             message schema {
                 REQUIRED BYTE_ARRAY id;
                 REQUIRED INT32 height;
                 REQUIRED BYTE_ARRAY hash;
                 REQUIRED BYTE_ARRAY parent_hash;
-                REQUIRED BYTE_ARRAY timestamp;
+                REQUIRED INT64 timestamp (TIMESTAMP(MILLIS, true));
             }
         ";
         parse_message_type(message_type).unwrap()
@@ -118,7 +119,7 @@ impl BlockParquet {
         self.data.height.push(block.height);
         self.data.hash.push(ByteArray::from(block.hash.into_bytes()));
         self.data.parent_hash.push(ByteArray::from(block.parent_hash.into_bytes()));
-        self.data.timestamp.push(ByteArray::from(block.timestamp.into_bytes()));
+        self.data.timestamp.push(block.timestamp.timestamp_millis());
     }
 }
 
@@ -149,6 +150,14 @@ fn save_parquet(parquet: &impl Parquet, path: &PathBuf) {
                         typed_writer.write_batch(data, None, None).unwrap();
                     }
                     _ => panic!("Only ColumnData::Int32 is available")
+                }
+            }
+            ColumnWriter::Int64ColumnWriter(ref mut typed_writer) => {
+                match *column_data {
+                    ColumnData::Int64(data) => {
+                        typed_writer.write_batch(data, None, None).unwrap();
+                    }
+                    _ => panic!("Only ColumnData::Int64 is available")
                 }
             }
             _ => {

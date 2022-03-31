@@ -2,5 +2,5 @@
 
 # Example
 ```sh
-cargo build && ./target/debug/parquet-dumper --out-dir ~/kusama-archive --capacity 100`
+<archive-program> | parquet-dumper --out-dir ~/kusama-archive --capacity 100
 ```
