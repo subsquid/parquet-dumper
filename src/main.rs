@@ -22,7 +22,7 @@ struct Args {
     out_dir: String,
     /// Count of blocks per file
     #[clap(short, long)]
-    capacity: u32
+    capacity: i32
 }
 
 
@@ -489,16 +489,15 @@ fn main() {
         create_dir(&call_out_dir).unwrap();
     }
 
-    let mut counter = 0;
     let mut block_parquet = BlockParquet::new();
     let mut extrinsic_parquet = ExtrinsicParquet::new();
     let mut event_parquet = EventParquet::new();
     let mut call_parquet = CallParquet::new();
     loop {
-        counter += 1;
         let mut line = String::new();
         stdin().read_line(&mut line).unwrap();
         let block_data: BlockData = serde_json::from_str(&line).unwrap();
+        let block_height = block_data.header.height;
         block_parquet.insert(block_data.header);
         for extrinsic in block_data.extrinsics {
             extrinsic_parquet.insert(extrinsic);
@@ -509,11 +508,11 @@ fn main() {
         for call in block_data.calls {
             call_parquet.insert(call);
         }
-        if counter % args.capacity == 0 {
-            let block_path = block_out_dir.join(format!("{}.parquet", counter));
-            let extrinsic_path = extrinsic_out_dir.join(format!("{}.parquet", counter));
-            let event_path = event_out_dir.join(format!("{}.parquet", counter));
-            let call_path = call_out_dir.join(format!("{}.parquet", counter));
+        if block_height % args.capacity == 0 && block_height != 0 {
+            let block_path = block_out_dir.join(format!("{}.parquet", block_height));
+            let extrinsic_path = extrinsic_out_dir.join(format!("{}.parquet", block_height));
+            let event_path = event_out_dir.join(format!("{}.parquet", block_height));
+            let call_path = call_out_dir.join(format!("{}.parquet", block_height));
             save_parquet(&block_parquet, &block_path);
             save_parquet(&extrinsic_parquet, &extrinsic_path);
             save_parquet(&event_parquet, &event_path);
