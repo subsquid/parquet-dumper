@@ -393,7 +393,9 @@ impl CallParquet {
 pub fn save_parquet(parquet: &impl Parquet, path: &Path) -> Result<(), std::io::Error> {
     let file = File::create(path)?;
     let schema = Arc::new(parquet.schema());
-    let props = Arc::new(WriterProperties::builder().build());
+    let mut builder = WriterProperties::builder();
+    builder = builder.set_compression(parquet::basic::Compression::GZIP);
+    let props = Arc::new(builder.build());
     let mut writer = SerializedFileWriter::new(file, schema, props)?;
     let mut row_group_writer = writer.next_row_group()?;
 
