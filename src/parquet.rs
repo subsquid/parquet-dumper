@@ -390,22 +390,22 @@ impl CallParquet {
 }
 
 
-pub fn save_parquet(parquet: &impl Parquet, path: &Path) {
-    let file = File::create(path).unwrap();
+pub fn save_parquet(parquet: &impl Parquet, path: &Path) -> Result<(), std::io::Error> {
+    let file = File::create(path)?;
     let schema = Arc::new(parquet.schema());
     let props = Arc::new(WriterProperties::builder().build());
-    let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
-    let mut row_group_writer = writer.next_row_group().unwrap();
+    let mut writer = SerializedFileWriter::new(file, schema, props)?;
+    let mut row_group_writer = writer.next_row_group()?;
 
     let mut col_index = 0;
     let parquet_context = parquet.context();
-    while let Some(mut col_writer) = row_group_writer.next_column().unwrap() {
+    while let Some(mut col_writer) = row_group_writer.next_column()? {
         let column_context = &parquet_context[col_index];
         match col_writer {
             ColumnWriter::ByteArrayColumnWriter(ref mut typed_writer) => {
                 match *column_context {
                     ContextType::ByteArray(context) => {
-                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None).unwrap();
+                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None)?;
                     }
                     _ => panic!("Only ContextType::ByteArray is available")
                 }
@@ -413,7 +413,7 @@ pub fn save_parquet(parquet: &impl Parquet, path: &Path) {
             ColumnWriter::Int32ColumnWriter(ref mut typed_writer) => {
                 match *column_context {
                     ContextType::Int32(context) => {
-                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None).unwrap();
+                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None)?;
                     }
                     _ => panic!("Only ContextType::Int32 is available")
                 }
@@ -421,7 +421,7 @@ pub fn save_parquet(parquet: &impl Parquet, path: &Path) {
             ColumnWriter::Int64ColumnWriter(ref mut typed_writer) => {
                 match *column_context {
                     ContextType::Int64(context) => {
-                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None).unwrap();
+                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None)?;
                     }
                     _ => panic!("Only ContextType::Int64 is available")
                 }
@@ -429,7 +429,7 @@ pub fn save_parquet(parquet: &impl Parquet, path: &Path) {
             ColumnWriter::BoolColumnWriter(ref mut typed_writer) => {
                 match *column_context {
                     ContextType::Bool(context) => {
-                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None).unwrap();
+                        typed_writer.write_batch(&context.data, Some(&context.def_levels), None)?;
                     }
                     _ => panic!("Only ContextType::Bool is available")
                 }
@@ -439,8 +439,9 @@ pub fn save_parquet(parquet: &impl Parquet, path: &Path) {
             }
         }
         col_index += 1;
-        row_group_writer.close_column(col_writer).unwrap();
+        row_group_writer.close_column(col_writer)?;
     }
-    writer.close_row_group(row_group_writer).unwrap();
-    writer.close().unwrap();
+    writer.close_row_group(row_group_writer)?;
+    writer.close()?;
+    Ok(())
 }

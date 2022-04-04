@@ -23,7 +23,7 @@ struct Args {
 }
 
 
-fn main() {
+fn main() -> Result<(), io::Error> {
     let args = Args::parse();
     let out_dir = PathBuf::from(&args.out_dir);
     if !out_dir.exists() {
@@ -74,10 +74,10 @@ fn main() {
             let extrinsic_path = extrinsic_out_dir.join(format!("{}.parquet", block_height));
             let event_path = event_out_dir.join(format!("{}.parquet", block_height));
             let call_path = call_out_dir.join(format!("{}.parquet", block_height));
-            save_parquet(&block_parquet, &block_path);
-            save_parquet(&extrinsic_parquet, &extrinsic_path);
-            save_parquet(&event_parquet, &event_path);
-            save_parquet(&call_parquet, &call_path);
+            save_parquet(&block_parquet, &block_path)?;
+            save_parquet(&extrinsic_parquet, &extrinsic_path)?;
+            save_parquet(&event_parquet, &event_path)?;
+            save_parquet(&call_parquet, &call_path)?;
             block_parquet = BlockParquet::new();
             extrinsic_parquet = ExtrinsicParquet::new();
             event_parquet = EventParquet::new();
