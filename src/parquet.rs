@@ -288,7 +288,7 @@ impl Parquet for CallParquet {
                 REQUIRED BYTE_ARRAY id;
                 REQUIRED BYTE_ARRAY extrinsic_id;
                 OPTIONAL BYTE_ARRAY parent_id;
-                OPTIONAL BYTE_ARRAY block_id;
+                REQUIRED BYTE_ARRAY block_id;
                 REQUIRED BOOLEAN success;
                 REQUIRED BYTE_ARRAY name;
                 OPTIONAL BYTE_ARRAY args (JSON);
