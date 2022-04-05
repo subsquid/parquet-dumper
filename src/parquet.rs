@@ -46,6 +46,8 @@ struct BlockParquetContext {
     hash: ColumnContext<ByteArray>,
     parent_hash: ColumnContext<ByteArray>,
     timestamp: ColumnContext<i64>,
+    spec_id: ColumnContext<ByteArray>,
+    validator: ColumnContext<ByteArray>,
 }
 
 
@@ -57,6 +59,8 @@ impl BlockParquetContext {
             hash: ColumnContext::new(),
             parent_hash: ColumnContext::new(),
             timestamp: ColumnContext::new(),
+            spec_id: ColumnContext::new(),
+            validator: ColumnContext::new(),
         }
     }
 }
@@ -66,11 +70,11 @@ struct ExtrinsicParquetContext {
     id: ColumnContext<ByteArray>,
     block_id: ColumnContext<ByteArray>,
     index_in_block: ColumnContext<i32>,
-    name: ColumnContext<ByteArray>,
     signature: ColumnContext<ByteArray>,
     success: ColumnContext<bool>,
     hash: ColumnContext<ByteArray>,
     call_id: ColumnContext<ByteArray>,
+    pos: ColumnContext<i32>,
 }
 
 
@@ -80,11 +84,11 @@ impl ExtrinsicParquetContext {
             id: ColumnContext::new(),
             block_id: ColumnContext::new(),
             index_in_block: ColumnContext::new(),
-            name: ColumnContext::new(),
             signature: ColumnContext::new(),
             success: ColumnContext::new(),
             hash: ColumnContext::new(),
             call_id: ColumnContext::new(),
+            pos: ColumnContext::new(),
         }
     }
 }
@@ -99,6 +103,7 @@ struct EventParquetContext {
     call_id: ColumnContext<ByteArray>,
     name: ColumnContext<ByteArray>,
     args: ColumnContext<ByteArray>,
+    pos: ColumnContext<i32>,
 }
 
 
@@ -113,6 +118,7 @@ impl EventParquetContext {
             call_id: ColumnContext::new(),
             name: ColumnContext::new(),
             args: ColumnContext::new(),
+            pos: ColumnContext::new(),
         }
     }
 }
@@ -120,12 +126,13 @@ impl EventParquetContext {
 
 struct CallParquetContext {
     id: ColumnContext<ByteArray>,
-    index: ColumnContext<i32>,
     extrinsic_id: ColumnContext<ByteArray>,
+    block_id: ColumnContext<ByteArray>,
     parent_id: ColumnContext<ByteArray>,
     success: ColumnContext<bool>,
     name: ColumnContext<ByteArray>,
     args: ColumnContext<ByteArray>,
+    pos: ColumnContext<i32>,
 }
 
 
@@ -133,12 +140,13 @@ impl CallParquetContext {
     fn new() -> Self {
         CallParquetContext {
             id: ColumnContext::new(),
-            index: ColumnContext::new(),
             extrinsic_id: ColumnContext::new(),
+            block_id: ColumnContext::new(),
             parent_id: ColumnContext::new(),
             success: ColumnContext::new(),
             name: ColumnContext::new(),
             args: ColumnContext::new(),
+            pos: ColumnContext::new(),
         }
     }
 }
@@ -172,6 +180,8 @@ impl Parquet for BlockParquet {
             ContextType::ByteArray(&self.context.hash),
             ContextType::ByteArray(&self.context.parent_hash),
             ContextType::Int64(&self.context.timestamp),
+            ContextType::ByteArray(&self.context.spec_id),
+            ContextType::ByteArray(&self.context.validator),
         ])
     }
 
@@ -183,6 +193,8 @@ impl Parquet for BlockParquet {
                 REQUIRED BYTE_ARRAY hash;
                 REQUIRED BYTE_ARRAY parent_hash;
                 REQUIRED INT64 timestamp (TIMESTAMP(MILLIS, true));
+                REQUIRED BYTE_ARRAY spec_id;
+                OPTIONAL BYTE_ARRAY validator;
             }
         ";
         parse_message_type(message_type).unwrap()
@@ -196,11 +208,11 @@ impl Parquet for ExtrinsicParquet {
             ContextType::ByteArray(&self.context.id),
             ContextType::ByteArray(&self.context.block_id),
             ContextType::Int32(&self.context.index_in_block),
-            ContextType::ByteArray(&self.context.name),
             ContextType::ByteArray(&self.context.signature),
             ContextType::Bool(&self.context.success),
             ContextType::ByteArray(&self.context.hash),
             ContextType::ByteArray(&self.context.call_id),
+            ContextType::Int32(&self.context.pos),
         ])
     }
 
@@ -210,11 +222,11 @@ impl Parquet for ExtrinsicParquet {
                 REQUIRED BYTE_ARRAY id;
                 REQUIRED BYTE_ARRAY block_id;
                 REQUIRED INT32 index_in_block;
-                REQUIRED BYTE_ARRAY name;
                 OPTIONAL BYTE_ARRAY signature (JSON);
                 REQUIRED BOOLEAN success;
                 REQUIRED BYTE_ARRAY hash;
                 REQUIRED BYTE_ARRAY call_id;
+                REQUIRED INT32 pos;
             }
         ";
         parse_message_type(message_type).unwrap()
@@ -233,6 +245,7 @@ impl Parquet for EventParquet {
             ContextType::ByteArray(&self.context.call_id),
             ContextType::ByteArray(&self.context.name),
             ContextType::ByteArray(&self.context.args),
+            ContextType::Int32(&self.context.pos),
         ])
     }
 
@@ -247,6 +260,7 @@ impl Parquet for EventParquet {
                 OPTIONAL BYTE_ARRAY call_id;
                 REQUIRED BYTE_ARRAY name;
                 OPTIONAL BYTE_ARRAY args (JSON);
+                REQUIRED INT32 pos;
             }
         ";
         parse_message_type(message_type).unwrap()
@@ -258,12 +272,13 @@ impl Parquet for CallParquet {
     fn context(&self) -> Vec<ContextType> {
         Vec::from([
             ContextType::ByteArray(&self.context.id),
-            ContextType::Int32(&self.context.index),
             ContextType::ByteArray(&self.context.extrinsic_id),
             ContextType::ByteArray(&self.context.parent_id),
+            ContextType::ByteArray(&self.context.block_id),
             ContextType::Bool(&self.context.success),
             ContextType::ByteArray(&self.context.name),
             ContextType::ByteArray(&self.context.args),
+            ContextType::Int32(&self.context.pos),
         ])
     }
 
@@ -271,12 +286,13 @@ impl Parquet for CallParquet {
         let message_type = "
             message schema {
                 REQUIRED BYTE_ARRAY id;
-                REQUIRED INT32 index;
                 REQUIRED BYTE_ARRAY extrinsic_id;
                 OPTIONAL BYTE_ARRAY parent_id;
+                OPTIONAL BYTE_ARRAY block_id;
                 REQUIRED BOOLEAN success;
                 REQUIRED BYTE_ARRAY name;
                 OPTIONAL BYTE_ARRAY args (JSON);
+                REQUIRED INT32 pos;
             }
         ";
         parse_message_type(message_type).unwrap()
@@ -297,6 +313,13 @@ impl BlockParquet {
         self.context.hash.data.push(ByteArray::from(block.hash.into_bytes()));
         self.context.parent_hash.data.push(ByteArray::from(block.parent_hash.into_bytes()));
         self.context.timestamp.data.push(block.timestamp.timestamp_millis());
+        self.context.spec_id.data.push(ByteArray::from(block.spec_id.into_bytes()));
+        if let Some(validator) = block.validator {
+            self.context.validator.data.push(ByteArray::from(validator.into_bytes()));
+            self.context.validator.def_levels.push(1);
+        } else {
+            self.context.validator.def_levels.push(0);
+        }
     }
 }
 
@@ -312,7 +335,6 @@ impl ExtrinsicParquet {
         self.context.id.data.push(ByteArray::from(extrinsic.id.into_bytes()));
         self.context.block_id.data.push(ByteArray::from(extrinsic.block_id.into_bytes()));
         self.context.index_in_block.data.push(extrinsic.index_in_block);
-        self.context.name.data.push(ByteArray::from(extrinsic.name.into_bytes()));
         if let Some(signature) = extrinsic.signature {
             self.context.signature.data.push(ByteArray::from(signature.to_string().into_bytes()));
             self.context.signature.def_levels.push(1);
@@ -322,6 +344,7 @@ impl ExtrinsicParquet {
         self.context.success.data.push(extrinsic.success);
         self.context.hash.data.push(ByteArray::from(extrinsic.hash.into_bytes()));
         self.context.call_id.data.push(ByteArray::from(extrinsic.call_id.into_bytes()));
+        self.context.pos.data.push(extrinsic.pos);
     }
 }
 
@@ -357,6 +380,7 @@ impl EventParquet {
         } else {
             self.context.args.def_levels.push(0);
         }
+        self.context.pos.data.push(event.pos);
     }
 }
 
@@ -370,7 +394,6 @@ impl CallParquet {
 
     pub fn insert(&mut self, call: Call) {
         self.context.id.data.push(ByteArray::from(call.id.into_bytes()));
-        self.context.index.data.push(call.index);
         self.context.extrinsic_id.data.push(ByteArray::from(call.extrinsic_id.into_bytes()));
         if let Some(parent_id) = call.parent_id {
             self.context.parent_id.data.push(ByteArray::from(parent_id.into_bytes()));
@@ -378,6 +401,7 @@ impl CallParquet {
         } else {
             self.context.parent_id.def_levels.push(0);
         }
+        self.context.block_id.data.push(ByteArray::from(call.block_id.into_bytes()));
         self.context.success.data.push(call.success);
         self.context.name.data.push(ByteArray::from(call.name.into_bytes()));
         if let Some(args) = call.args {
@@ -386,6 +410,7 @@ impl CallParquet {
         } else {
             self.context.args.def_levels.push(0);
         }
+        self.context.pos.data.push(call.pos);
     }
 }
 

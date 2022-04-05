@@ -10,6 +10,8 @@ pub struct Block {
     pub hash: String,
     pub parent_hash: String,
     pub timestamp: DateTime<Utc>,
+    pub spec_id: String,
+    pub validator: Option<String>,
 }
 
 
@@ -18,11 +20,11 @@ pub struct Extrinsic {
     pub id: String,
     pub block_id: String,
     pub index_in_block: i32,
-    pub name: String,
     pub signature: Option<Value>,
     pub success: bool,
-    pub hash: String,
     pub call_id: String,
+    pub hash: String,
+    pub pos: i32,
 }
 
 
@@ -36,18 +38,20 @@ pub struct Event {
     pub call_id: Option<String>,
     pub name: String,
     pub args: Option<Value>,
+    pub pos: i32,
 }
 
 
 #[derive(Deserialize, Debug)]
 pub struct Call {
     pub id: String,
-    pub index: i32,
-    pub extrinsic_id: String,
     pub parent_id: Option<String>,
+    pub block_id: String,
+    pub extrinsic_id: String,
     pub success: bool,
     pub name: String,
     pub args: Option<Value>,
+    pub pos: i32,
 }
 
 
