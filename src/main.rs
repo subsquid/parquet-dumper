@@ -4,7 +4,7 @@ use clap::Parser;
 use entities::BlockData;
 use eth_archive_parquet_writer::{ParquetWriter, ParquetConfig, BlockRange};
 use tokio::sync::mpsc;
-use crate::parquet::Blocks;
+use crate::parquet::{Blocks, Extrinsics, Calls, Events};
 
 mod entities;
 mod parquet;
@@ -21,25 +21,55 @@ struct Args {
 async fn main() {
     let args = Args::parse();
 
-    let config = ParquetConfig {
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let block_config = ParquetConfig {
         name: "block".to_string(),
         path: PathBuf::from(&args.out_dir),
         channel_size: 100,
         items_per_file: 4096,
         items_per_row_group: 64,
     };
+    let block_writer: ParquetWriter<Blocks> = ParquetWriter::new(block_config, tx.clone());
 
-    let (tx, _rx) = mpsc::unbounded_channel();
-    let block_writer: ParquetWriter<Blocks> = ParquetWriter::new(config, tx);
+    let extrinsic_config = ParquetConfig {
+        name: "extrinsic".to_string(),
+        path: PathBuf::from(&args.out_dir),
+        channel_size: 100,
+        items_per_file: 4096,
+        items_per_row_group: 64,
+    };
+    let extrinsic_writer: ParquetWriter<Extrinsics> = ParquetWriter::new(extrinsic_config, tx.clone());
+
+    let call_config = ParquetConfig {
+        name: "call".to_string(),
+        path: PathBuf::from(&args.out_dir),
+        channel_size: 100,
+        items_per_file: 4096,
+        items_per_row_group: 64,
+    };
+    let call_writer: ParquetWriter<Calls> = ParquetWriter::new(call_config, tx.clone());
+
+    let event_config = ParquetConfig {
+        name: "event".to_string(),
+        path: PathBuf::from(&args.out_dir),
+        channel_size: 100,
+        items_per_file: 4096,
+        items_per_row_group: 64,
+    };
+    let event_writer: ParquetWriter<Events> = ParquetWriter::new(event_config, tx);
 
     loop {
         let mut line = String::new();
         io::stdin().read_line(&mut line).unwrap();
         let block_data: BlockData = serde_json::from_str(&line).unwrap();
+
         let block_range = BlockRange {
             from: usize::try_from(block_data.header.height).unwrap(),
             to: usize::try_from(block_data.header.height).unwrap(),
         };
         block_writer.send((block_range, vec![block_data.header])).await;
+        extrinsic_writer.send((block_range, block_data.extrinsics)).await;
+        call_writer.send((block_range, block_data.calls)).await;
+        event_writer.send((block_range, block_data.events)).await;
     }
 }
