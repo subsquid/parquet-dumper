@@ -5,9 +5,12 @@ use entities::BlockData;
 use eth_archive_parquet_writer::{ParquetWriter, ParquetConfig, BlockRange};
 use tokio::sync::mpsc;
 use crate::parquet::{Blocks, Extrinsics, Calls, Events};
+use crate::sqlite::SQLite;
 
 mod entities;
 mod parquet;
+mod sqlite;
+mod error;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -58,6 +61,10 @@ async fn main() {
     };
     let event_writer: ParquetWriter<Events> = ParquetWriter::new(event_config, tx);
 
+    let sqlite_path = std::path::Path::new(&args.out_dir).join("metadata.sqlite");
+    let sqlite = SQLite::new(&sqlite_path).unwrap();
+    sqlite.init_schema().unwrap();
+
     loop {
         let mut line = String::new();
         io::stdin().read_line(&mut line).unwrap();
@@ -71,5 +78,8 @@ async fn main() {
         extrinsic_writer.send((block_range, block_data.extrinsics)).await;
         call_writer.send((block_range, block_data.calls)).await;
         event_writer.send((block_range, block_data.events)).await;
+        if let Some(metadata) = &block_data.metadata {
+            sqlite.insert_metadata(metadata).unwrap();
+        }
     }
 }

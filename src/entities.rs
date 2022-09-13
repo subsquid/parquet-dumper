@@ -57,10 +57,21 @@ pub struct Call {
     pub pos: i32,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Metadata {
+    pub id: String,
+    pub spec_name: String,
+    pub spec_version: i32,
+    pub block_height: i32,
+    pub block_hash: String,
+    pub hex: String,
+}
+
 #[derive(Deserialize)]
 pub struct BlockData {
     pub header: Block,
     pub extrinsics: Vec<Extrinsic>,
     pub events: Vec<Event>,
     pub calls: Vec<Call>,
+    pub metadata: Option<Metadata>,
 }
